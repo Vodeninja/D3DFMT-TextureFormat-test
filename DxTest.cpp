@@ -6,6 +6,9 @@
 #pragma comment(lib, "d3d9.lib")
 
 #define D3DFMT_RAWZ (D3DFORMAT)MAKEFOURCC('R', 'A', 'W', 'Z')
+#define D3DFMT_R2VB MAKEFOURCC('R', '2', 'V', 'B')
+#define D3DFMT_NVDB MAKEFOURCC('N', 'V', 'D', 'B')
+#define D3DFMT_NV_RESZ MAKEFOURCC('R', 'E', 'S', 'Z')
 
 D3DFORMAT formats[] = {
     D3DFMT_R8G8B8,
@@ -106,12 +109,12 @@ D3DFORMAT formats[] = {
     (D3DFORMAT)MAKEFOURCC('N', 'U', 'L', 'L'),
     (D3DFORMAT)MAKEFOURCC('N', 'V', 'C', 'S'), // Internal resource created by NVAPI
     (D3DFORMAT)MAKEFOURCC('I', 'N', 'T', 'Z'),
-    (D3DFORMAT)MAKEFOURCC('R', 'E', 'S', 'Z'),
+    (D3DFORMAT)D3DFMT_NV_RESZ,
     (D3DFORMAT)MAKEFOURCC('D', 'F', '2', '4'),
     (D3DFORMAT)MAKEFOURCC('D', 'F', '1', '6'),
 
-    (D3DFORMAT)MAKEFOURCC('N', 'V', 'D', 'B'),
-    (D3DFORMAT)MAKEFOURCC('R', '2', 'V', 'B'),
+    (D3DFORMAT)D3DFMT_NVDB,
+    (D3DFORMAT)D3DFMT_R2VB,
     (D3DFORMAT)MAKEFOURCC('I', 'N', 'S', 'T'),
     (D3DFORMAT)MAKEFOURCC('A', 'T', 'O', 'C'),
     (D3DFORMAT)MAKEFOURCC('S', 'S', 'A', 'A'),
@@ -231,11 +234,11 @@ const char* D3DFormatToString(D3DFORMAT format)
         case MAKEFOURCC('N', 'U', 'L', 'L'): return "D3DFMT_NULL";
         case MAKEFOURCC('N', 'V', 'C', 'S'): return "D3DFMT_NVCS";
         case MAKEFOURCC('I', 'N', 'T', 'Z'): return "D3DFMT_INTZ";
-        case MAKEFOURCC('R', 'E', 'S', 'Z'): return "D3DFMT_NV_RESZ";
+        case D3DFMT_NV_RESZ: return "D3DFMT_NV_RESZ";
         case MAKEFOURCC('D', 'F', '2', '4'): return "D3DFMT_ATI_DF24";
         case MAKEFOURCC('D', 'F', '1', '6'): return "D3DFMT_ATI_DF16";
-        case MAKEFOURCC('N', 'V', 'D', 'B'): return "D3DFMT_NVDB";
-        case MAKEFOURCC('R', '2', 'V', 'B'): return "D3DFMT_R2VB";
+        case D3DFMT_NVDB: return "D3DFMT_NVDB";
+        case D3DFMT_R2VB: return "D3DFMT_R2VB"; 
         case MAKEFOURCC('I', 'N', 'S', 'T'): return "D3DFMT_INST";
         case MAKEFOURCC('A', 'T', 'O', 'C'): return "D3DFMT_ATOC";
         case MAKEFOURCC('S', 'S', 'A', 'A'): return "D3DFMT_SSAA";
@@ -317,7 +320,10 @@ bool ForceTypeSurface(D3DFORMAT m_ImageFormat)
         (m_ImageFormat == (D3DFORMAT)MAKEFOURCC('Y', '4', '1', '0')) ||
         (m_ImageFormat == (D3DFORMAT)MAKEFOURCC('Y', 'V', '1', '2')) ||
         (m_ImageFormat == (D3DFORMAT)MAKEFOURCC('A', 'I', '4', '4')) ||
-
+        (m_ImageFormat == (D3DFORMAT)D3DFMT_R2VB) || // https://aras-p.info/texts/D3D9GPUHacks.html
+        (m_ImageFormat == (D3DFORMAT)D3DFMT_NVDB) ||
+        (m_ImageFormat == (D3DFORMAT)D3DFMT_NV_RESZ) ||
+        
         (m_ImageFormat == D3DFMT_UYVY) ||
         (m_ImageFormat == D3DFMT_YUY2) ||
         (m_ImageFormat == D3DFMT_BINARYBUFFER)
@@ -328,6 +334,20 @@ void IsTextureFormatOk(D3DFORMAT TextureFormat, D3DFORMAT g_DeviceFormat, int nU
 {
     UINT g_DisplayAdapter = D3DADAPTER_DEFAULT;
     D3DDEVTYPE g_DeviceType = D3DDEVTYPE_HAL;
+
+    if (TextureFormat == (D3DFORMAT)D3DFMT_R2VB)
+    {
+        nUsage |= D3DUSAGE_DMAP; // https://userpages.cs.umbc.edu/olano/s2006c03/scheuermann.pdf
+        //nUsage |= D3DUSAGE_QUERY_VERTEXTEXTURE;
+        //nUsage |= D3DUSAGE_RENDERTARGET;
+        //nUsage |= D3DUSAGE_DEPTHSTENCIL;
+        //g_DeviceFormat = D3DFMT_D24X8;
+    }
+
+    if (TextureFormat == (D3DFORMAT)D3DFMT_NV_RESZ)
+    {
+        nUsage |= D3DUSAGE_RENDERTARGET;
+    }
 
     HRESULT hr = pD3D->CheckDeviceFormat(
         g_DisplayAdapter, g_DeviceType, g_DeviceFormat,
